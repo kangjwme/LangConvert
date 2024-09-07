@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>馬老師報告「最佳化」</title>
+    <title>幫你的報告「最佳化」</title>
     <style>
         :root {
             --primary-color: #4a90e2;
@@ -146,8 +146,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>馬老師報告「最佳化」</h1>
-        <p style="text-align:center; color: gray">幫你把支語跟老師不喜歡的字轉換成繁體中文，讓你不會被老師偷嗆。W。</p>
+        <h1>幫你的報告「最佳化」</h1>
+        <p style="text-align:center; color: gray">幫你把老師不喜歡的字轉換成老師可以接受的字，讓你不會被老師偷嗆。W。</p>
         <div id="warningMessage">!轉換後請記得在檢查一次轉換結果!</div>
         <hr>
         <div class="content-area">
@@ -167,7 +167,7 @@
         <div id="error"></div>
         <div id="conversionLog"></div>
         
-        <div id="completionMessage">恭喜你 0 檢出，可以拿去給教授看看咯!</div>
+        <div id="completionMessage">恭喜你 0 檢出，可以拿去給老師看看咯!</div>
     </div>
 
     <script>
@@ -215,6 +215,8 @@
         }
 
         function multiReplace(text, replacements) {
+            text = replaceChineseQuotes(text);
+            
             const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const pattern = new RegExp(Object.keys(replacements).map(escapeRegExp).join('|'), 'g');
             return text.replace(pattern, (matched) => replacements[matched]);
@@ -269,9 +271,9 @@
 
                 const replacements = {};
                 conversionData.forEach((item) => {
-                    if (item && item["馬老師討厭的"] && item["馬老師接受的"]) {
-                        const mainland = converter(item["馬老師討厭的"]);
-                        replacements[mainland] = item["馬老師接受的"];
+                    if (item && item["老師討厭的"] && item["老師接受的"]) {
+                        const mainland = converter(item["老師討厭的"]);
+                        replacements[mainland] = item["老師接受的"];
                     }
                 });
 

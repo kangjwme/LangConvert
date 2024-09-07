@@ -214,6 +214,11 @@
                 .replace(/'/g, "&#039;");
         }
 
+        function replaceChineseQuotes(text) {
+            // 使用正則表達式替換引號
+            return text.replace(/"([^"\s]+?)"/g, '「$1」');
+        }
+
         function multiReplace(text, replacements) {
             text = replaceChineseQuotes(text);
             

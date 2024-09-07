@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>馬老師報告「最佳化」</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5a623;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --success-color: #4caf50;
+            --error-color: #f44336;
+        }
+        body {
+            font-family: 'Noto Sans TC', Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+        }
+        .content-area {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .text-area {
+            flex: 1;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+        }
+        h2 {
+            color: var(--secondary-color);
+            margin-top: 0;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-size: 1rem;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background-color: #3a7bc8;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .copy-btn {
+            background-color: var(--secondary-color);
+            margin-top: 0.5rem;
+        }
+        .copy-btn:hover {
+            background-color: #e69516;
+        }
+        .copy-btn.success {
+            background-color: var(--success-color);
+        }
+        #convertBtn {
+            display: block;
+            margin: 0 auto 2rem;
+        }
+        #loading, #error {
+            text-align: center;
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+        #loading {
+            color: var(--primary-color);
+        }
+        #error {
+            color: var(--error-color);
+            display: none;
+        }
+        #conversionLog {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-top: 2rem;
+            display: none;
+        }
+        .log-item {
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background-color: #f1f3f5;
+            border-radius: 4px;
+        }
+        .log-item .original {
+            color: #d32f2f;
+        }
+        .log-item .converted {
+            color: #388e3c;
+        }
+        @media (max-width: 768px) {
+            .content-area {
+                flex-direction: column;
+            }
+        }
+        #completionMessage {
+            text-align: center;
+            font-size: 1.2em;
+            color: #4caf50;
+            margin-top: 20px;
+            font-weight: bold;
+            display: none;
+        }
+        #warningMessage {
+            text-align: center;
+            font-size: 1.2em;
+            color: #ff0000;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>馬老師報告「最佳化」</h1>
+        <p style="text-align:center; color: gray">幫你把支語跟老師不喜歡的字轉換成繁體中文，讓你不會被老師偷嗆。W。</p>
+        <div id="warningMessage">!轉換後請記得在檢查一次轉換結果!</div>
+        <hr>
+        <div class="content-area">
+            <div class="text-area">
+                <h2>輸入文字</h2>
+                <textarea id="input" placeholder="請在此輸入文字..."></textarea>
+                <button class="copy-btn" onclick="copyText('input', this)">複製輸入</button>
+            </div>
+            <div class="text-area">
+                <h2>轉換結果</h2>
+                <textarea id="output" readonly></textarea>
+                <button class="copy-btn" onclick="copyText('output', this)">複製結果</button>
+            </div>
+        </div>
+        <button id="convertBtn" disabled>驗證並轉換</button>
+        <div id="loading">正在加載轉換數據...</div>
+        <div id="error"></div>
+        <div id="conversionLog"></div>
+        
+        <div id="completionMessage">恭喜你 0 檢出，可以拿去給教授看看咯!</div>
+    </div>
+
+    <script>
+        let conversionData = [];
+        let converter;
+
+        function loadConversionData() {
+            fetch('convert.json')
+                .then(response => response.json())
+                .then(data => {
+                    conversionData = data;
+                    initializeConverter();
+                })
+                .catch(error => {
+                    console.error('Error loading conversion data:', error);
+                    document.getElementById('loading').style.display = 'none';
+                    showError('加載轉換數據失敗，請確保 convert.json 文件存在於正確位置。');
+                });
+        }
+
+        function initializeConverter() {
+            try {
+                converter = OpenCC.Converter({ from: 'cn', to: 'tw' });
+                document.getElementById('convertBtn').disabled = false;
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Error initializing converter:', error);
+                showError('初始化轉換器失敗，請稍後再試。');
+            }
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('error');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function multiReplace(text, replacements) {
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pattern = new RegExp(Object.keys(replacements).map(escapeRegExp).join('|'), 'g');
+            return text.replace(pattern, (matched) => replacements[matched]);
+        }
+
+        function findAllReplacements(text, replacements) {
+            const results = [];
+            Object.keys(replacements).forEach(mainland => {
+                const taiwan = replacements[mainland];
+                let index = 0;
+                while ((index = text.indexOf(mainland, index)) !== -1) {
+                    results.push({ index, mainland, taiwan });
+                    index += mainland.length;
+                }
+            });
+            return results.sort((a, b) => a.index - b.index);
+        }
+
+        function processLine(line, replacements) {
+            const allReplacements = findAllReplacements(line, replacements);
+            if (allReplacements.length === 0) return null;
+
+            let originalResult = '';
+            let convertedResult = '';
+            let lastIndex = 0;
+
+            allReplacements.forEach(({ index, mainland, taiwan }) => {
+                // 添加替換前的文本
+                originalResult += escapeHtml(line.substring(lastIndex, index));
+                convertedResult += escapeHtml(line.substring(lastIndex, index));
+
+                // 添加被替換的詞
+                originalResult += `<strong>「${escapeHtml(mainland)}」</strong>`;
+                convertedResult += `<strong>「${escapeHtml(taiwan)}」</strong>`;
+
+                lastIndex = index + mainland.length;
+            });
+
+            // 添加最後一個替換之後的文本
+            originalResult += escapeHtml(line.substring(lastIndex));
+            convertedResult += escapeHtml(line.substring(lastIndex));
+
+            return { original: originalResult, converted: convertedResult };
+        }
+
+        document.getElementById('convertBtn').addEventListener('click', function() {
+            const input = document.getElementById('input').value;
+            const log = [];
+
+            try {
+                const convertedInput = converter(input);
+
+                const replacements = {};
+                conversionData.forEach((item) => {
+                    if (item && item["馬老師討厭的"] && item["馬老師接受的"]) {
+                        const mainland = converter(item["馬老師討厭的"]);
+                        replacements[mainland] = item["馬老師接受的"];
+                    }
+                });
+
+                const lines = convertedInput.split('\n');
+                const convertedLines = lines.map(line => multiReplace(line, replacements));
+
+                let hasChanges = false;
+                lines.forEach((line, index) => {
+                    const processedLine = processLine(line, replacements);
+                    if (processedLine) {
+                        hasChanges = true;
+                        log.push(`
+                            <div class="log-item">
+                                <span class="original">${processedLine.original}</span> → <br>
+                                <span class="converted">${processedLine.converted}</span>
+                            </div>
+                        `);
+                    }
+                });
+
+                document.getElementById('output').value = convertedLines.join('\n');
+                const conversionLogElement = document.getElementById('conversionLog');
+                const completionMessageElement = document.getElementById('completionMessage');
+                
+                if (log.length > 0) {
+                    conversionLogElement.innerHTML = log.join('');
+                    conversionLogElement.style.display = 'block';
+                    completionMessageElement.style.display = 'none';
+                } else {
+                    conversionLogElement.style.display = 'none';
+                    completionMessageElement.style.display = 'block';
+                }
+
+                document.getElementById('error').style.display = 'none';
+            } catch (error) {
+                console.error('Error during conversion:', error);
+                showError('轉換過程中發生錯誤，請檢查輸入文本並重試。');
+            }
+        });
+        function copyText(elementId, button) {
+            const textArea = document.getElementById(elementId);
+            textArea.select();
+            document.execCommand('copy');
+            
+            const originalText = button.textContent;
+            button.textContent = '複製成功';
+            button.classList.add('success');
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('success');
+            }, 2000);
+        }
+
+        loadConversionData();
+    </script>
+</body>
+</html>

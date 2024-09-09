@@ -249,18 +249,16 @@
             let lastIndex = 0;
 
             allReplacements.forEach(({ index, mainland, taiwan }) => {
-                // 添加替換前的文本
+
                 originalResult += escapeHtml(line.substring(lastIndex, index));
                 convertedResult += escapeHtml(line.substring(lastIndex, index));
 
-                // 添加被替換的詞
                 originalResult += `<strong>「${escapeHtml(mainland)}」</strong>`;
                 convertedResult += `<strong>「${escapeHtml(taiwan)}」</strong>`;
 
                 lastIndex = index + mainland.length;
             });
 
-            // 添加最後一個替換之後的文本
             originalResult += escapeHtml(line.substring(lastIndex));
             convertedResult += escapeHtml(line.substring(lastIndex));
 
@@ -315,7 +313,7 @@
                 document.getElementById('error').style.display = 'none';
             } catch (error) {
                 console.error('Error during conversion:', error);
-                showError('轉換過程中發生錯誤，請檢查輸入文本並重試。');
+                showError('轉換過程中發生錯誤，請檢查輸入文字並重試。');
             }
         });
         function copyText(elementId, button) {
